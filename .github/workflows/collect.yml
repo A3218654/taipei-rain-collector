@@ -1,0 +1,31 @@
+name: collect-rain
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # 每 10 分鐘（UTC；GitHub 排程可能延遲數分鐘）
+  workflow_dispatch:          # 可在 Actions 頁面手動執行
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collect-rain
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch rain API
+        run: python3 rain_collector.py
+      - name: Commit new data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add raw
+          git diff --cached --quiet && exit 0
+          git commit -m "rain data $(TZ=Asia/Taipei date +%Y-%m-%dT%H:%M)"
+          git pull --rebase
+          git push
